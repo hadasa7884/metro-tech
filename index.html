@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מטרו-טק — קו כחול</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f7fa; color: #1a1a2e; direction: rtl; }
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: block; }
+.metro-header { background: #1a56c4; color: #fff; padding: 20px 20px 18px; }
+.line-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.18); border-radius: 20px; padding: 4px 12px; font-size: 12px; margin-bottom: 10px; }
+.line-dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; }
+.metro-header h1 { font-size: 24px; font-weight: 600; margin: 0; }
+.metro-header p { font-size: 14px; color: rgba(255,255,255,0.8); margin-top: 4px; }
+.track { display: flex; align-items: center; padding: 16px 20px 8px; background: #fff; border-bottom: 1px solid #e8ecf0; }
+.stop { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.stop-circle { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid #c8d4e8; background: #fff; z-index: 2; }
+.stop-circle.active { background: #1a56c4; border-color: #1a56c4; }
+.stop-circle.done { background: #1a56c4; border-color: #1a56c4; }
+.stop-label { font-size: 10px; color: #888; margin-top: 4px; }
+.track-line { flex: 1; height: 2.5px; background: #e8ecf0; margin-top: -16px; }
+.track-line.done { background: #1a56c4; }
+.content { padding: 16px; }
+.card { background: #fff; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+label { font-size: 13px; color: #666; display: block; margin-bottom: 6px; }
+input, select, textarea { width: 100%; font-size: 15px; font-family: inherit; direction: rtl; border: 1.5px solid #e0e6f0; border-radius: 10px; padding: 10px 12px; background: #f8fafc; color: #1a1a2e; outline: none; }
+input:focus, select:focus, textarea:focus { border-color: #1a56c4; background: #fff; }
+textarea { resize: none; min-height: 80px; }
+.stage-pills { display: flex; gap: 8px; margin-bottom: 4px; }
+.stage-pill { flex: 1; padding: 11px 4px; border-radius: 10px; border: 1.5px solid #e0e6f0; text-align: center; cursor: pointer; font-size: 13px; color: #666; background: #f8fafc; transition: all 0.15s; }
+.stage-pill.selected { border-color: #1a56c4; background: #e8f0fd; color: #1a3a8a; font-weight: 600; }
+.btn { width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit; border: none; transition: opacity 0.15s; margin-bottom: 0; }
+.btn:active { opacity: 0.85; }
+.btn-primary { background: #1a56c4; color: #fff; }
+.btn-secondary { background: #fff; color: #1a1a2e; border: 1.5px solid #e0e6f0; margin-top: 10px; }
+.platform-card { border-radius: 14px; padding: 20px; margin-bottom: 14px; }
+.p1 { background: #e8f0fd; border: 1.5px solid #4a7fd4; }
+.p2 { background: #e6f4ec; border: 1.5px solid #4aaa6a; }
+.p3 { background: #fdf3e3; border: 1.5px solid #d4943a; }
+.p4 { background: #f0ebfd; border: 1.5px solid #8a5ad4; }
+.platform-num { font-size: 52px; font-weight: 700; line-height: 1; }
+.p1 .platform-num { color: #1a3a8a; } .p2 .platform-num { color: #1a5a2a; }
+.p3 .platform-num { color: #7a4a0a; } .p4 .platform-num { color: #3a1a7a; }
+.platform-name { font-size: 16px; font-weight: 600; margin-top: 4px; }
+.p1 .platform-name { color: #1a3a8a; } .p2 .platform-name { color: #1a5a2a; }
+.p3 .platform-name { color: #7a4a0a; } .p4 .platform-name { color: #3a1a7a; }
+.signal-chip { background: #e8f0fd; border: 1px solid #4a7fd4; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #1a3a8a; margin-bottom: 14px; }
+.topic-banner { background: #1a56c4; color: #fff; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; }
+.topic-num { font-size: 11px; opacity: 0.75; margin-bottom: 6px; }
+.topic-text { font-size: 17px; font-weight: 600; line-height: 1.4; }
+.partner-card { background: #f8fafc; border-radius: 14px; padding: 16px; margin-bottom: 14px; border: 1.5px solid #e8ecf0; }
+.partner-row { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.avatar { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex-shrink: 0; }
+.av1 { background: #e8f0fd; color: #1a3a8a; } .av2 { background: #e6f4ec; color: #1a5a2a; }
+.av3 { background: #fdf3e3; color: #7a4a0a; } .av4 { background: #f0ebfd; color: #3a1a7a; }
+.stage-badge { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 600; margin-top: 3px; }
+.sb-pre { background: #fdf3e3; color: #7a4a0a; }
+.sb-mechina { background: #f0ebfd; color: #3a1a7a; }
+.sb-degree { background: #e6f4ec; color: #1a5a2a; }
+.timer-block { text-align: center; padding: 10px 0 6px; }
+.timer-big { font-size: 52px; font-weight: 700; color: #1a1a2e; letter-spacing: -2px; }
+.timer-bar-wrap { background: #e8ecf0; border-radius: 4px; height: 6px; overflow: hidden; margin: 10px 0 6px; }
+.timer-bar-fill { height: 100%; background: #1a56c4; border-radius: 4px; transition: width 1s linear; }
+.timer-caption { font-size: 13px; color: #888; }
+.round-steps { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; }
+.rs { width: 32px; height: 6px; border-radius: 3px; background: #e8ecf0; }
+.rs.done { background: #1a56c4; } .rs.active { background: #4a7fd4; }
+.wait-box { text-align: center; padding: 60px 20px; }
+.wait-icon { font-size: 60px; margin-bottom: 20px; }
+.wall-tabs { display: flex; gap: 10px; margin-bottom: 16px; }
+.wtab { flex: 1; padding: 10px; text-align: center; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px solid #e0e6f0; background: #fff; font-family: inherit; color: #666; }
+.wtab.active { background: #1a56c4; color: #fff; border-color: #1a56c4; }
+.wcard { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.wcard-meta { font-size: 11px; color: #aaa; margin-top: 8px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.stat-box { background: #f8fafc; border-radius: 12px; padding: 14px; text-align: center; border: 1px solid #e8ecf0; }
+.stat-num { font-size: 28px; font-weight: 700; color: #1a56c4; }
+.stat-label { font-size: 11px; color: #888; margin-top: 3px; }
+.admin-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+.admin-row:last-child { border-bottom: none; }
+.loading { text-align: center; padding: 40px; color: #888; font-size: 14px; }
+.success-banner { background: #e6f4ec; border: 1px solid #4aaa6a; border-radius: 10px; padding: 12px 16px; color: #1a5a2a; font-size: 14px; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+
+<div id="s-loading" class="screen active">
+  <div class="loading" style="padding-top: 40vh;">
+    <div style="font-size: 40px; margin-bottom: 16px;">🚇</div>
+    <div style="font-size: 16px; font-weight: 600;">מטרו-טק</div>
+    <div style="margin-top: 8px;">מתחבר...</div>
+  </div>
+</div>
+
+<div id="s-login" class="screen">
+  <div class="metro-header">
+    <div class="line-badge"><div class="line-dot"></div>קו כחול</div>
+    <h1>מטרו-טק</h1>
+    <p>נטוורקינג חכם בזמן אמת</p>
+  </div>
+  <div class="track">
+    <div class="stop"><div class="stop-circle active"></div><div class="stop-label">כניסה</div></div>
+    <div class="track-line"></div>
+    <div class="stop"><div class="stop-circle"></div><div class="stop-label">רציף</div></div>
+    <div class="track-line"></div>
+    <div class="stop"><div class="stop-circle"></div><div class="stop-label">סבבים</div></div>
+    <div class="track-line"></div>
+    <div class="stop"><div class="stop-circle"></div><div class="stop-label">רפלקציה</div></div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <label>שם מלא</label>
+      <input type="text" id="inp-name" placeholder="הכנס/י את שמך" style="margin-bottom:16px;" />
+      <label>שלב בדרך</label>
+      <div class="stage-pills">
+        <div class="stage-pill" onclick="selectStage('pre',this)">קדם מכינה</div>
+        <div class="stage-pill" onclick="selectStage('mechina',this)">מכינה</div>
+        <div class="stage-pill" onclick="selectStage('degree',this)">תואר</div>
+      </div>
+      <div id="login-error" style="color:#c0392b;font-size:13px;margin-top:8px;display:none;">נא למלא שם ולבחור שלב</div>
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">עלייה לרכבת</button>
+    <button class="btn btn-secondary" onclick="showAdmin()">כניסת מנחה</button>
+  </div>
+</div>
+
+<div id="s-group" class="screen">
+  <div class="metro-header">
+    <div class="line-badge"><div class="line-dot"></div>קו כחול</div>
+    <h1 id="grp-hi">שלום!</h1>
+    <p>שויכת לרציף שלך</p>
+  </div>
+  <div class="track">
+    <div class="stop"><div class="stop-circle done"></div><div class="stop-label">כניסה</div></div>
+    <div class="track-line done"></div>
+    <div class="stop"><div class="stop-circle active"></div><div class="stop-label">רציף</div></div>
+    <div class="track-line"></div>
+    <div class="stop"><div class="stop-circle"></div><div class="stop-label">סבבים</div></div>
+    <div class="track-line"></div>
+    <div class="stop"><div class="stop-circle"></div><div class="stop-label">רפלקציה</div></div>
+  </div>
+  <div class="content">
+    <div id="grp-platform-card" class="platform-card p1">
+      <div style="font-size:13px;opacity:0.65;margin-bottom:6px;">הרציף שלך</div>
+      <div class="platform-num" id="grp-num">1</div>
+      <div class="platform-name" id="grp-name">רציף 1</div>
+    </div>
+    <div class="signal-chip" id="grp-signal">סימן זיהוי: ...</div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px;">מה עכשיו?</div>
+      <div style="font-size:13px;color:#666;line-height:1.7;">לכו לאזור הרציף שלכם. המנחה יפעיל את הסבבים כשכולם מוכנים. בכל סבב — 4 דקות עם שותף/ה ונושא שיחה.</div>
+    </div>
+    <button class="btn btn-primary" onclick="goToWait()">מוכן/ה — ממתין/ת לסבב</button>
+  </div>
+</div>
+
+<div id="s-wait" class="screen">
+  <div class="metro-header">
+    <div class="line-badge"><div class="line-dot"></div>קו כחול</div>
+    <h1>ממתין/ת...</h1>
+    <p>המנחה יפעיל את הסבב הבא</p>
+  </div>
+  <div class="content">
+    <div class="wait-box">
+      <div class="wait-icon">🚉</div>
+      <div style="font-size:18px;font-weight:600;margin-bottom:10px;">ממתין/ת לסבב הבא</div>
+      <div style="font-size:14px;color:#666;">המנחה יפעיל את הסבב כשכולם מוכנים</div>
+    </div>
+  </div>
+</div>
+
+<div id="s-round" class="screen">
+  <div class="metro-header">
+    <div class="line-badge"><div class="line-dot"></div><span id="round-header-label">סבב 1</span></div>
+    <h1>זמן לשיחה!</h1>
+    <p>מצאו את השותף/ה שלכם</p>
+  </div>
+  <div class="content">
+    <div class="round-steps" id="round-steps"></div>
+    <div class="topic-banner">
+      <div class="topic-num" id="topic-num">נושא הסבב</div>
+      <div class="topic-text" id="topic-text">-</div>
+    </div>
+    <div class="partner-card">
+      <div class="partner-row">
+        <div class="avatar av1" id="p-avatar">?</div>
+        <div>
+          <div style="font-size:16px;font-weight:600;" id="p-name">-</div>
+          <div id="p-stage-badge" class="stage-badge sb-degree">-</div>
+        </div>
+      </div>
+      <div class="signal-chip" style="margin-bottom:0;" id="p-signal">-</div>
+    </div>
+    <div class="timer-block">
+      <div class="timer-big" id="tmr-display">4:00</div>
+      <div class="timer-bar-wrap"><div class="timer-bar-fill" id="tmr-bar" style="width:100%"></div></div>
+      <div class="timer-caption" id="tmr-caption">זמן לשיחה</div>
+    </div>
+    <button class="btn btn-primary" id="btn-done-round" onclick="doneRound()" style="display:none;margin-top:16px;">סיימתי — הסבב הבא</button>
+    <button class="btn btn-secondary" id="btn-skip-tmr" onclick="skipTimer()">דלג על הטיימר</button>
+  </div>
+</div>
+
+<div id="s-reflection" class="screen">
+  <div class="metro-header">
+    <div class="line-badge"><div class="line-dot"></div>קו כחול</div>
+    <h1>רפלקציה</h1>
+    <p>רגע להתבונן לפני שיוצאים</p>
+  </div>
+  <div class="track">
+    <div class="stop"><div class="stop-circle done"></div><div class="stop-label">כניסה</div></div>
+    <div class="track-line done"></div>
+    <div class="stop"><div class="stop-circle done"></div><div class="stop-label">רציף</div></div>
+    <div class="track-line done"></div>
+    <div class="stop"><div class="stop-circle done"></div><div class="stop-label">סבבים</div></div>
+    <div class="track-line done"></div>
+    <div class="stop"><div class="stop-circle active"></div><div class="stop-label">רפלקציה</div></div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <label style="font-size:15px;font-weight:600;color:#1a1a2e;">💡 דבר אחד שלקחתי</label>
+      <textarea id="inp-takeaway" placeholder="כתוב/י כאן..."></textarea>
+    </div>
+    <div class="card">
+      <label style="font-size:15px;font-weight:600;color:#1a1a2e;">❓ שאלה שנשארה לי</label>
+      <textarea id="inp-question" placeholder="כתוב/י כאן..."></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="submitReflection()">שלח לקיר המשותף</button>
+  </div>
+</div>
+
+<div id="s-wall" class="screen">
+  <div class="metro-header">
+    <div class="line-badge"><div class="line-dot"></div>קיר משותף</div>
+    <h1>קיר הרפלקציות</h1>
+    <p id="wall-count">0 תגובות</p>
+  </div>
+  <div class="content">
+    <div class="wall-tabs">
+      <button class="wtab active" id="wtab-t" onclick="wallTab('t')">💡 מה לקחתי</button>
+      <button class="wtab" id="wtab-q" onclick="wallTab('q')">❓ שאלות</button>
+    </div>
+    <div id="wall-t"></div>
+    <div id="wall-q" style="display:none;"></div>
+  </div>
+</div>
+
+<div id="s-admin" class="screen">
+  <div class="metro-header" style="background:#1a1a2e;">
+    <div class="line-badge" style="background:rgba(255,255,255,0.15);">מנחה</div>
+    <h1>לוח בקרה</h1>
+    <p>ניהול הכנס בזמן אמת</p>
+  </div>
+  <div class="content">
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-num" id="st-total">0</div><div class="stat-label">משתתפים</div></div>
+      <div class="stat-box"><div class="stat-num" id="st-round">0/5</div><div class="stat-label">סבב נוכחי</div></div>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:600;margin-bottom:10px;">חלוקת רצפים</div>
+      <div id="admin-platforms"></div>
+    </div>
+    <button class="btn btn-primary" onclick="adminLaunchRound()">הפעל סבב <span id="admin-round-label">1</span></button>
+    <button class="btn btn-secondary" onclick="showWall()">הצג קיר על המסך</button>
+    <button class="btn btn-secondary" onclick="adminReset()">אפס את כל הנתונים</button>
+    <button class="btn btn-secondary" onclick="show('s-login')">חזור</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getDatabase, ref, set, get, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDvS46DH3A-ObR2bKlg4OkH5_T7L7b0CGA",
+  authDomain: "metro-tech-f41ed.firebaseapp.com",
+  databaseURL: "https://metro-tech-f41ed-default-rtdb.firebaseio.com",
+  projectId: "metro-tech-f41ed",
+  storageBucket: "metro-tech-f41ed.firebasestorage.app",
+  messagingSenderId: "477044541009",
+  appId: "1:477044541009:web:2d91c5be0104f0a7c4da70"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const TOPICS = [
+  "למה נכנסתי לעולם ההייטק",
+  "מה היה / יהיה הכי קשה",
+  "טעות שעשיתי או חושש/ת לעשות",
+  "איך לא לוותר",
+  "טיפ שהיית נותן/ת למי שמתחיל/ה"
+];
+const SIGNALS = [
+  "חולצה בולטת","כוס קפה ביד","תגית שם כחולה","ידיים בכיסים",
+  "אוזניות על הצוואר","תיק גב גדול","כובע","מחייך/ת בחיבה",
+  "עומד/ת ליד הכניסה","בקבוק מים","שרשרת בולטת","ג'קט צבעוני",
+  "נעליים צבעוניות","טלפון ביד שמאל","עם עט ביד"
+];
+const STAGE_HE = { pre: "קדם מכינה", mechina: "מכינה", degree: "תואר" };
+const STAGE_ORDER = { degree: 0, mechina: 1, pre: 2 };
+
+let selectedStage = '';
+let user = null;
+let timerInterval = null;
+let timeLeft = 240;
+
+window.selectStage = function(val, el) {
+  selectedStage = val;
+  document.querySelectorAll('.stage-pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+};
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(sc => sc.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+window.show = show;
+
+function esc(t) {
+  return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function assignPlatform(stage) {
+  const snap = await get(ref(db, 'participants'));
+  const participants = snap.exists() ? Object.values(snap.val()) : [];
+  const counts = [0,0,0,0];
+  const stageCounts = [{pre:0,mechina:0,degree:0},{pre:0,mechina:0,degree:0},{pre:0,mechina:0,degree:0},{pre:0,mechina:0,degree:0}];
+  participants.forEach(p => {
+    counts[p.platform-1]++;
+    stageCounts[p.platform-1][p.stage]++;
+  });
+  const minCount = Math.min(...counts);
+  const candidates = counts.map((c,i) => c===minCount ? i : -1).filter(i => i>=0);
+  let best = candidates[0];
+  let bestScore = 99;
+  candidates.forEach(i => {
+    const sc = stageCounts[i][stage] || 0;
+    if (sc < bestScore) { bestScore = sc; best = i; }
+  });
+  return best + 1;
+}
+
+function generatePairings(participants, roundIndex) {
+  const byPlatform = {1:[],2:[],3:[],4:[]};
+  participants.forEach(p => byPlatform[p.platform].push(p));
+  const pairs = {};
+  participants.forEach(p => pairs[p.id] = { partnerName:'ללא שותף בסבב זה', partnerStage:'', partnerSignal:'' });
+  [1,2,3,4].forEach(plat => {
+    const group = [...byPlatform[plat]];
+    group.sort((a,b) => STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage]);
+    const offset = Math.floor(group.length / 2);
+    const high = group.slice(0, offset);
+    const low = group.slice(offset);
+    high.forEach((hp, i) => {
+      const lp = low[(i + roundIndex) % low.length];
+      if (lp) {
+        pairs[hp.id] = { partnerName:lp.name, partnerStage:lp.stage, partnerSignal:lp.signal };
+        pairs[lp.id] = { partnerName:hp.name, partnerStage:hp.stage, partnerSignal:hp.signal };
+      }
+    });
+  });
+  return pairs;
+}
+
+window.doLogin = async function() {
+  const name = document.getElementById('inp-name').value.trim();
+  const errEl = document.getElementById('login-error');
+  if (!name || !selectedStage) { errEl.style.display='block'; return; }
+  errEl.style.display = 'none';
+
+  const snap = await get(ref(db, 'participants'));
+  const participants = snap.exists() ? snap.val() : {};
+  const existing = Object.values(participants).find(p => p.name === name);
+
+  if (existing) {
+    user = existing;
+  } else {
+    const platform = await assignPlatform(selectedStage);
+    const signal = SIGNALS[Math.floor(Math.random() * SIGNALS.length)];
+    const id = Date.now() + '_' + Math.random().toString(36).slice(2);
+    user = { id, name, stage: selectedStage, platform, signal };
+    await set(ref(db, 'participants/' + id), user);
+  }
+  showGroup();
+};
+
+function showGroup() {
+  const p = user.platform;
+  document.getElementById('grp-hi').textContent = 'שלום, ' + user.name.split(' ')[0] + '!';
+  document.getElementById('grp-num').textContent = p;
+  document.getElementById('grp-name').textContent = 'רציף ' + p;
+  document.getElementById('grp-platform-card').className = 'platform-card p' + p;
+  document.getElementById('grp-signal').textContent = 'סימן זיהוי שלך: ' + user.signal;
+  show('s-group');
+}
+
+window.goToWait = function() {
+  show('s-wait');
+  onValue(ref(db, 'session'), (snap) => {
+    if (!snap.exists()) return;
+    const session = snap.val();
+    const activeScreen = document.querySelector('.screen.active');
+    if (!activeScreen) return;
+    const id = activeScreen.id;
+    if ((id === 's-wait' || id === 's-round') && session.roundActive && session.currentRound > 0) {
+      loadRound(session.currentRound, session.participants || {});
+    }
+    if (session.currentRound >= 5 && !session.roundActive && id === 's-round') {
+      show('s-reflection');
+    }
+  });
+};
+
+async function loadRound(roundNum, participantsObj) {
+  let participants = participantsObj;
+  if (!participants || Object.keys(participants).length === 0) {
+    const snap = await get(ref(db, 'participants'));
+    participants = snap.exists() ? snap.val() : {};
+  }
+  const participantsList = Object.values(participants);
+  const pairs = generatePairings(participantsList, roundNum - 1);
+  const myPair = pairs[user.id] || { partnerName:'ללא שותף', partnerStage:'', partnerSignal:'' };
+
+  document.getElementById('round-header-label').textContent = 'סבב ' + roundNum + ' מתוך 5';
+  document.getElementById('topic-num').textContent = 'נושא סבב ' + roundNum;
+  document.getElementById('topic-text').textContent = TOPICS[roundNum-1] || TOPICS[4];
+  document.getElementById('p-name').textContent = myPair.partnerName;
+
+  const badge = document.getElementById('p-stage-badge');
+  badge.textContent = myPair.partnerStage ? STAGE_HE[myPair.partnerStage] : '';
+  badge.className = 'stage-badge sb-' + (myPair.partnerStage || 'degree');
+  document.getElementById('p-signal').textContent = myPair.partnerSignal ? 'סימן זיהוי: ' + myPair.partnerSignal : '';
+
+  const initials = myPair.partnerName !== 'ללא שותף' ? myPair.partnerName.split(' ').map(w=>w[0]).join('').slice(0,2) : '?';
+  const av = document.getElementById('p-avatar');
+  av.textContent = initials;
+  av.className = 'avatar av' + ((roundNum-1) % 4 + 1);
+
+  const steps = document.getElementById('round-steps');
+  steps.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const d = document.createElement('div');
+    d.className = 'rs' + (i < roundNum-1 ? ' done' : i === roundNum-1 ? ' active' : '');
+    steps.appendChild(d);
+  }
+
+  document.getElementById('btn-done-round').style.display = 'none';
+  document.getElementById('btn-skip-tmr').style.display = 'block';
+  document.getElementById('tmr-caption').style.color = '#888';
+  startTimer();
+  show('s-round');
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = 240;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      document.getElementById('tmr-caption').textContent = 'הזמן הסתיים! עברו לשותף/ה הבא/ה';
+      document.getElementById('tmr-caption').style.color = '#c0392b';
+      document.getElementById('btn-done-round').style.display = 'block';
+      document.getElementById('btn-skip-tmr').style.display = 'none';
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timeLeft/60), s = timeLeft%60;
+  document.getElementById('tmr-display').textContent = m + ':' + (s<10?'0':'') + s;
+  document.getElementById('tmr-bar').style.width = ((timeLeft/240)*100) + '%';
+  const danger = timeLeft <= 30;
+  document.getElementById('tmr-display').style.color = danger ? '#c0392b' : '#1a1a2e';
+  document.getElementById('tmr-bar').style.background = danger ? '#c0392b' : '#1a56c4';
+  if (timeLeft > 0) document.getElementById('tmr-caption').textContent = 'זמן לשיחה';
+}
+
+window.skipTimer = function() {
+  clearInterval(timerInterval);
+  timeLeft = 0;
+  updateTimerDisplay();
+  document.getElementById('tmr-caption').textContent = 'דלגת על הטיימר';
+  document.getElementById('btn-done-round').style.display = 'block';
+  document.getElementById('btn-skip-tmr').style.display = 'none';
+};
+
+window.doneRound = async function() {
+  clearInterval(timerInterval);
+  const snap = await get(ref(db, 'session/currentRound'));
+  const currentRound = snap.exists() ? snap.val() : 0;
+  if (currentRound >= 5) { show('s-reflection'); }
+  else { show('s-wait'); }
+};
+
+window.submitReflection = async function() {
+  const t = document.getElementById('inp-takeaway').value.trim();
+  const q = document.getElementById('inp-question').value.trim();
+  if (!t && !q) { alert('נא למלא לפחות שדה אחד'); return; }
+  if (t) await push(ref(db, 'reflections'), { type:'t', text:t, name:user.name, stage:user.stage, ts:Date.now() });
+  if (q) await push(ref(db, 'reflections'), { type:'q', text:q, name:user.name, stage:user.stage, ts:Date.now() });
+  showWall();
+};
+
+function showWall() {
+  show('s-wall');
+  onValue(ref(db, 'reflections'), (snap) => {
+    const rfl = snap.exists() ? Object.values(snap.val()) : [];
+    const tDiv = document.getElementById('wall-t');
+    const qDiv = document.getElementById('wall-q');
+    tDiv.innerHTML = ''; qDiv.innerHTML = '';
+    rfl.filter(r => r.type==='t').forEach(r => {
+      const c = document.createElement('div');
+      c.className = 'wcard';
+      c.innerHTML = '<div style="font-size:14px;line-height:1.6;">' + esc(r.text) + '</div><div class="wcard-meta">' + esc(r.name) + ' · ' + STAGE_HE[r.stage] + '</div>';
+      tDiv.appendChild(c);
+    });
+    rfl.filter(r => r.type==='q').forEach(r => {
+      const c = document.createElement('div');
+      c.className = 'wcard';
+      c.innerHTML = '<div style="font-size:14px;line-height:1.6;">' + esc(r.text) + '</div><div class="wcard-meta">' + esc(r.name) + ' · ' + STAGE_HE[r.stage] + '</div>';
+      qDiv.appendChild(c);
+    });
+    document.getElementById('wall-count').textContent = rfl.length + ' תגובות';
+  });
+}
+window.showWall = showWall;
+
+window.wallTab = function(tab) {
+  document.getElementById('wall-t').style.display = tab==='t' ? 'block' : 'none';
+  document.getElementById('wall-q').style.display = tab==='q' ? 'block' : 'none';
+  document.getElementById('wtab-t').className = 'wtab' + (tab==='t' ? ' active' : '');
+  document.getElementById('wtab-q').className = 'wtab' + (tab==='q' ? ' active' : '');
+};
+
+window.showAdmin = function() {
+  show('s-admin');
+  onValue(ref(db, 'participants'), (snap) => {
+    const parts = snap.exists() ? Object.values(snap.val()) : [];
+    document.getElementById('st-total').textContent = parts.length;
+    const platDiv = document.getElementById('admin-platforms');
+    platDiv.innerHTML = '';
+    [1,2,3,4].forEach(p => {
+      const grp = parts.filter(x => x.platform===p);
+      const pre = grp.filter(x => x.stage==='pre').length;
+      const mec = grp.filter(x => x.stage==='mechina').length;
+      const deg = grp.filter(x => x.stage==='degree').length;
+      const row = document.createElement('div');
+      row.className = 'admin-row';
+      row.innerHTML = '<span style="font-weight:600;">רציף ' + p + '</span><span style="color:#888;font-size:12px;">' + grp.length + ' | קדם:' + pre + ' מכינה:' + mec + ' תואר:' + deg + '</span>';
+      platDiv.appendChild(row);
+    });
+  });
+  onValue(ref(db, 'session/currentRound'), (snap) => {
+    const r = snap.exists() ? snap.val() : 0;
+    document.getElementById('st-round').textContent = r + '/5';
+    document.getElementById('admin-round-label').textContent = r + 1;
+  });
+};
+
+window.adminLaunchRound = async function() {
+  const snap = await get(ref(db, 'session/currentRound'));
+  const current = snap.exists() ? snap.val() : 0;
+  if (current >= 5) { alert('כל 5 הסבבים הסתיימו!'); return; }
+  const partsSnap = await get(ref(db, 'participants'));
+  const participants = partsSnap.exists() ? partsSnap.val() : {};
+  await update(ref(db, 'session'), {
+    currentRound: current + 1,
+    roundActive: true,
+    participants
+  });
+  alert('סבב ' + (current+1) + ' הופעל!');
+};
+
+window.adminReset = async function() {
+  if (!confirm('למחוק את כל הנתונים?')) return;
+  await remove(ref(db, 'participants'));
+  await remove(ref(db, 'session'));
+  await remove(ref(db, 'reflections'));
+  alert('הנתונים אופסו.');
+};
+
+show('s-login');
+</script>
+</body>
+</html>
